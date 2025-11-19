@@ -46,7 +46,7 @@ Bridge sederhana untuk transaksi ke IP Center (engine penyedia pulsa) dengan:
 FE / Web
     │
     ▼
-Cloudflare Worker / Backend utama
+Backend utama
     │  (POST /api/transaction + header x-auvyn-secret)
     ▼
 Auvyn Apies (VPS)
@@ -218,7 +218,7 @@ Endpoint yang dipanggil Worker/backend.
 ```json
 {
   "product": "XDED5",
-  "dest": "087727009745",
+  "dest": "085727035336",
   "qty": 1,
   "refID": "AVN1234567890",
   "meta": {
@@ -260,7 +260,7 @@ Endpoint yang dipanggil Worker/backend.
   "statusCode": 200,
   "refID": "AVN1736425720255",
   "product": "XDED5",
-  "dest": "087727009745",
+  "dest": "085727035336",
   "qty": 1,
   "sign": "base64-url-sign",
   "centerUrl": "http://.../trx?product=...",
