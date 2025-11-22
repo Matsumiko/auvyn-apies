@@ -4,7 +4,8 @@
 //  - Klasifikasi: success / pending / failed pakai pola R1234.xxx
 //  - Baca M-Bal (saldo) dari format "M-Bal : x - y = z" / "M-Bal : x"
 //  - PATCH: simpan mapping refID->meta untuk report final
-//  - PATCH: sanitize payload sebelum callback
+//  - PATCH: sanitize payload sebelum callback + sebelum response endpoint
+//    (sensitif hanya di log VPS + Telegram)
 // ===============================================
 
 const crypto = require('crypto');
@@ -12,7 +13,7 @@ const config = require('./config');
 const { logger, trxSuccessLogger, trxFailedLogger, trxPendingLogger } = require('./logger');
 const { notifyTrx, notifyLowBalance } = require('./telegram');
 const { postCallback } = require('./callback');
-const { savePending } = require('./store'); // PATCH
+const { savePending } = require('./store');
 
 // ========== UTIL SIGN & REFID ==========
 
@@ -239,7 +240,7 @@ function classifyTransaction(rawText, httpStatus) {
   return 'pending';
 }
 
-// ========== SANITIZER UNTUK CALLBACK KE WORKER ==========
+// ========== SANITIZER UNTUK CALLBACK/RESPONSE PUBLIK ==========
 
 function redactRaw(rawText = '') {
   let t = String(rawText);
@@ -287,6 +288,7 @@ function sanitizeForCallback(fullPayload) {
 
     raw: fullPayload.raw ? redactRaw(fullPayload.raw) : null,
   };
+
   return safe;
 }
 
@@ -354,7 +356,7 @@ async function sendTransaction({ product, dest, qty, refID, meta }) {
     receivedAt: new Date().toISOString(),
   };
 
-  // PATCH: simpan mapping refID -> meta
+  // PATCH: simpan mapping refID -> meta (buat report final)
   savePending(effectiveRef, {
     refID: effectiveRef,
     product,
@@ -369,16 +371,18 @@ async function sendTransaction({ product, dest, qty, refID, meta }) {
   else if (category === 'failed') trxFailedLogger.info(resultPayload);
   else trxPendingLogger.info(resultPayload);
 
+  // Telegram tetap full (internal kamu)
   notifyTrx(category, resultPayload).catch(() => {});
   if (balanceInfo && config.balanceLowLimit > 0 && balanceInfo.remaining <= config.balanceLowLimit) {
     notifyLowBalance(balanceInfo).catch(() => {});
   }
 
-  // PATCH: callback
+  // Callback ke Worker versi aman
   const safeCallbackPayload = sanitizeForCallback(resultPayload);
   postCallback('transaction.request', safeCallbackPayload).catch(() => {});
 
-  return resultPayload;
+  // Response endpoint ke client versi aman
+  return sanitizeForCallback(resultPayload);
 }
 
 // ========== FUNGSI CEK SALDO (M-Bal) ==========
@@ -444,7 +448,8 @@ async function checkBalance({ memberId, meta, pin, password } = {}) {
     notifyLowBalance(balanceInfo).catch(() => {});
   }
 
-  return resultPayload;
+  // Response endpoint
+  return sanitizeForCallback(resultPayload);
 }
 
 // ========== FUNGSI TIKET TOPUP M-Bal ==========
@@ -508,7 +513,9 @@ async function createMBalTicket({ amount, memberId, meta }) {
 
   const safeCallbackPayload = sanitizeForCallback(resultPayload);
   postCallback('balance.ticket', safeCallbackPayload).catch(() => {});
-  return resultPayload;
+
+  // Response endpoint
+  return sanitizeForCallback(resultPayload);
 }
 
 module.exports = {

@@ -66,7 +66,7 @@ router.all('/', async (req, res) => {
   const balanceInfo = parseBalance(message);
   const category = classifyFromReport(message, statusProvider);
 
-  // Payload FINAL full (untuk log internal)
+  // Payload FINAL full (untuk log internal + Telegram internal)
   const finalPayload = {
     ok: category !== 'failed',
     statusCode: 200,
@@ -93,11 +93,11 @@ router.all('/', async (req, res) => {
   else if (category === 'failed') trxFailedLogger.info(finalPayload);
   else trxPendingLogger.info(finalPayload);
 
-  // Notif internal
+  // Notif internal tetap full
   notifyTrx(category, finalPayload).catch(() => {});
   notifyReport(rawReportPayload).catch(() => {});
 
-  // Callback FINAL
+  // Callback FINAL ke Worker versi aman
   const safeFinal = sanitizeForCallback(finalPayload);
   postCallback('transaction.report', safeFinal).catch(() => {});
 
