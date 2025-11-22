@@ -3,6 +3,8 @@
 //  AUVYN APIES • IP Center Bridge
 //  - Klasifikasi: success / pending / failed pakai pola R1234.xxx
 //  - Baca M-Bal (saldo) dari format "M-Bal : x - y = z" / "M-Bal : x"
+//  - PATCH: simpan mapping refID->meta untuk report final
+//  - PATCH: sanitize payload sebelum callback
 // ===============================================
 
 const crypto = require('crypto');
@@ -10,6 +12,7 @@ const config = require('./config');
 const { logger, trxSuccessLogger, trxFailedLogger, trxPendingLogger } = require('./logger');
 const { notifyTrx, notifyLowBalance } = require('./telegram');
 const { postCallback } = require('./callback');
+const { savePending } = require('./store'); // PATCH
 
 // ========== UTIL SIGN & REFID ==========
 
@@ -29,7 +32,6 @@ function buildSignature({ memberId, product, dest, refID, pin, password }) {
 }
 
 // SIGN untuk balance / tiket M-Bal
-// NOTE: Jika pakai rumus SIGN khusus, tinggal ganti di sini.
 function buildBalanceSign({ memberId }) {
   const prefix = config.signPrefix || 'ENGINE';
   const template = `${prefix}|${memberId}|${config.pin}|${config.password}`;
@@ -44,7 +46,6 @@ function generateRefId(prefix = 'AVN') {
 // ========== REGEX OTOMAX ==========
 
 const OTOMAX_PATTERNS = [
-  // MENUNGGU JAWABAN / AKAN DIPROSES
   {
     code: 'PENDING_AKAN_DIPROSES',
     state: 'PENDING',
@@ -56,14 +57,12 @@ const OTOMAX_PATTERNS = [
     regex: /R(?<trxid>\d+).*\.(?<tujuan>.+) @/i,
   },
 
-  // SUKSES NORMAL
   {
     code: 'SUKSES',
     state: 'SUCCESS',
     regex: /R(?<trxid>\d+).*\.(?<tujuan>.+) SUKSES.*SN\/Ref:\s*(?<sn>.+)\. M-Bal/i,
   },
 
-  // SUKSES SUDAH PERNAH (status=20)
   {
     code: 'SUKSES_SUDAH_PERNAH',
     state: 'SUCCESS',
@@ -71,63 +70,54 @@ const OTOMAX_PATTERNS = [
     regex: /R#(?<trxid>\d+).*\.(?<tujuan>.+) sdh.*SN\/Ref:\s*(?<sn>.+)\. M-Bal/i,
   },
 
-  // TUJUAN SALAH
   {
     code: 'GAGAL_TUJUAN_SALAH',
     state: 'FAILED',
     regex: /R#(?<trxid>\d+).*\.(?<tujuan>.+) GAGAL\. Nomor tujuan salah\./i,
   },
 
-  // TIMEOUT
   {
     code: 'GAGAL_TIMEOUT',
     state: 'FAILED',
     regex: /R(?<trxid>\d+).*\.(?<tujuan>\d+) GAGAL karena timeout/i,
   },
 
-  // SALAH KODE / NOMINAL
   {
     code: 'GAGAL_SALAH_KODE',
     state: 'FAILED',
     regex: /R(?<trxid>\d+).*\.(?<tujuan>\d+) GAGAL, salah/i,
   },
 
-  // NOMOR BLACKLIST
   {
     code: 'GAGAL_BLACKLIST',
     state: 'FAILED',
     regex: /R#(?<trxid>\d+).*\.(?<tujuan>\d+) sdh pernah jam .*status Nomor Blacklist/i,
   },
 
-  // PRODUK GANGGUAN
   {
     code: 'GAGAL_PRODUK_GANGGUAN',
     state: 'FAILED',
     regex: /R(?<trxid>\d+).*\.(?<tujuan>.+) GAGAL\. Produk sedang gangguan\./i,
   },
 
-  // SALDO TIDAK CUKUP
   {
     code: 'GAGAL_SALDO_TIDAK_CUKUP',
     state: 'FAILED',
     regex: /R(?<trxid>\d+).*\.(?<tujuan>\d+) GAGAL\. Saldo tidak cukup/i,
   },
 
-  // GAGAL GENERIK "dikarenakan ..."
   {
     code: 'GAGAL_DIKARENAKAN',
     state: 'FAILED',
     regex: /R(?<trxid>\d+).*\.(?<tujuan>\d+) GAGAL dikarenakan/i,
   },
 
-  // CEK TRANSAKSI - TIDAK ADA DATA
   {
     code: 'CEK_TIDAK_ADA_DATA',
     state: 'NOT_FOUND',
     regex: /TIDAK ADA transaksi Tujuan "(?<tujuan>\d+)" pada tgl (?<tanggal>\d{2}\/\d{2}\/\d{2})\. Tidak ada data\./i,
   },
 
-  // CEK TRANSAKSI - SUKSES
   {
     code: 'CEK_SUKSES',
     state: 'SUCCESS',
@@ -135,7 +125,6 @@ const OTOMAX_PATTERNS = [
   },
 ];
 
-// Parser jawaban mentah Otomax -> object terstruktur
 function parseOtomaxMessage(message) {
   const text = String(message || '').trim();
 
@@ -144,7 +133,7 @@ function parseOtomaxMessage(message) {
     if (match) {
       const groups = match.groups || {};
       return {
-        state: pattern.state || 'UNKNOWN', // SUCCESS / FAILED / PENDING / NOT_FOUND
+        state: pattern.state || 'UNKNOWN',
         code: pattern.code || 'UNKNOWN',
         trxid: groups.trxid || null,
         tujuan: groups.tujuan || null,
@@ -174,20 +163,16 @@ function parseBalance(rawText) {
 
   let remainingStr;
 
-  // Format:
-  // "M-Bal : 77.872.622 - 45.000 = 77.827.622"
   let m = text.match(/M-Bal\s*:\s*([\d.,]+)\s*[–\-]\s*([\d.,]+)\s*=\s*([\d.,]+)/i);
   if (m && m[3]) {
     remainingStr = m[3];
   } else {
-    // "M-Bal : 7.065.077"
     m = text.match(/M-Bal\s*:\s*([\d.,]+)/i);
     if (m && m[1]) {
       remainingStr = m[1];
     }
   }
 
-  // Fallback ke pola lama "Saldo ..."
   if (!remainingStr) {
     let match = text.match(/Saldo\s+([\d.,]+)\s*[–\-]\s*([\d.,]+)\s*=\s*([\d.,]+)/i);
     if (match && match[3]) {
@@ -208,10 +193,7 @@ function parseBalance(rawText) {
   const remaining = Number(numeric);
   if (!Number.isFinite(remaining)) return null;
 
-  return {
-    raw: remainingStr,
-    remaining,
-  };
+  return { raw: remainingStr, remaining };
 }
 
 // ========== HTTP HELPER ==========
@@ -239,22 +221,15 @@ function classifyTransaction(rawText, httpStatus) {
 
   if (parsed && parsed.state) {
     switch (parsed.state) {
-      case 'SUCCESS':
-        return 'success';
-      case 'FAILED':
-        return 'failed';
-      case 'PENDING':
-        return 'pending';
-      case 'NOT_FOUND':
-        return 'failed';
-      default:
-        break;
+      case 'SUCCESS': return 'success';
+      case 'FAILED': return 'failed';
+      case 'PENDING': return 'pending';
+      case 'NOT_FOUND': return 'failed';
+      default: break;
     }
   }
 
-  // Fallback lama kalau format berubah
   const text = String(rawText || '').toLowerCase();
-
   if (/gagal|failed|reject/.test(text)) return 'failed';
   if (/akan diproses|menunggu jawaban|sedang diproses|proses/.test(text) && !/sukses|berhasil/.test(text)) {
     return 'pending';
@@ -262,6 +237,57 @@ function classifyTransaction(rawText, httpStatus) {
   if (/sukses|berhasil|ok/.test(text)) return 'success';
 
   return 'pending';
+}
+
+// ========== SANITIZER UNTUK CALLBACK KE WORKER ==========
+
+function redactRaw(rawText = '') {
+  let t = String(rawText);
+
+  // buang detail HRG / M-Bal / SN
+  t = t.replace(/HRG:.*?M-?Bal\s*:\s*.*$/i, '[REDACTED]');
+  t = t.replace(/M-?Bal\s*:\s*.*$/i, '[REDACTED]');
+  t = t.replace(/SN\/Ref:\s*.*?(?=\.|$)/i, 'SN/Ref: [REDACTED]');
+
+  // buang memberID / sign / url center yang kebawa
+  t = t.replace(/memberID=\w+/ig, 'memberID=[REDACTED]');
+  t = t.replace(/sign=[^&\s]+/ig, 'sign=[REDACTED]');
+  t = t.replace(/https?:\/\/[^\s]+\/trx\?[^\s]+/ig, '[REDACTED_URL]');
+
+  return t.trim();
+}
+
+function sanitizeForCallback(fullPayload) {
+  if (!fullPayload || typeof fullPayload !== 'object') return fullPayload;
+
+  const safe = {
+    ok: fullPayload.ok,
+    statusCode: fullPayload.statusCode,
+    refID: fullPayload.refID,
+    product: fullPayload.product,
+    dest: fullPayload.dest,
+    qty: fullPayload.qty,
+    category: fullPayload.category,
+    receivedAt: fullPayload.receivedAt,
+    meta: fullPayload.meta || null,
+
+    providerResult: fullPayload.providerResult
+      ? {
+          state: fullPayload.providerResult.state || null,
+          code: fullPayload.providerResult.code || null,
+          trxid: fullPayload.providerResult.trxid || null,
+          tujuan: fullPayload.providerResult.tujuan || null,
+          sn: fullPayload.providerResult.sn ? '[REDACTED]' : null,
+          duplicate: !!fullPayload.providerResult.duplicate,
+          raw: fullPayload.providerResult.raw
+            ? redactRaw(fullPayload.providerResult.raw)
+            : null
+        }
+      : null,
+
+    raw: fullPayload.raw ? redactRaw(fullPayload.raw) : null,
+  };
+  return safe;
 }
 
 // ========== FUNGSI TRX UTAMA ==========
@@ -295,13 +321,7 @@ async function sendTransaction({ product, dest, qty, refID, meta }) {
 
   const url = `${config.centerUrl}/trx?${params.toString()}`;
 
-  logger.info('Send to center', {
-    url,
-    refID: effectiveRef,
-    product,
-    dest,
-    qty: quantity,
-  });
+  logger.info('Send to center', { url, refID: effectiveRef, product, dest, qty: quantity });
 
   const ipRes = await safeFetch(url, { method: 'GET' }, 20000);
   const rawText = await ipRes.text();
@@ -334,45 +354,60 @@ async function sendTransaction({ product, dest, qty, refID, meta }) {
     receivedAt: new Date().toISOString(),
   };
 
-  if (category === 'success') {
-    trxSuccessLogger.info(resultPayload);
-  } else if (category === 'failed') {
-    trxFailedLogger.info(resultPayload);
-  } else {
-    trxPendingLogger.info(resultPayload);
-  }
+  // PATCH: simpan mapping refID -> meta
+  savePending(effectiveRef, {
+    refID: effectiveRef,
+    product,
+    dest,
+    qty: quantity,
+    meta: meta || null,
+    firstPayload: resultPayload,
+  });
+
+  // Log internal tetap full
+  if (category === 'success') trxSuccessLogger.info(resultPayload);
+  else if (category === 'failed') trxFailedLogger.info(resultPayload);
+  else trxPendingLogger.info(resultPayload);
 
   notifyTrx(category, resultPayload).catch(() => {});
-
   if (balanceInfo && config.balanceLowLimit > 0 && balanceInfo.remaining <= config.balanceLowLimit) {
     notifyLowBalance(balanceInfo).catch(() => {});
   }
 
-  postCallback('transaction.request', resultPayload).catch(() => {});
+  // PATCH: callback
+  const safeCallbackPayload = sanitizeForCallback(resultPayload);
+  postCallback('transaction.request', safeCallbackPayload).catch(() => {});
 
   return resultPayload;
 }
 
 // ========== FUNGSI CEK SALDO (M-Bal) ==========
-// 4. Cek M-Bal : balance?memberID=[memberid]&sign=[sign]
+// 4. Cek M-Bal : balance?memberID=[memberid]
+// UPDATE: no sign, tapi tetap kirim pin & password
 
-async function checkBalance({ memberId, meta } = {}) {
+async function checkBalance({ memberId, meta, pin, password } = {}) {
   if (!config.centerUrl) throw new Error('CENTER_URL is not configured');
+
   const usedMemberId = memberId || config.memberId;
-  if (!usedMemberId || !config.pin || !config.password) {
-    throw new Error('Member credentials are not fully configured');
+  const usedPin = pin || config.pin;
+  const usedPassword = password || config.password;
+
+  if (!usedMemberId) {
+    throw new Error('memberID is required for balance check');
+  }
+  if (!usedPin || !usedPassword) {
+    throw new Error('PIN dan Password wajib diisi untuk balance check tanpa sign');
   }
 
-  const sign = buildBalanceSign({ memberId: usedMemberId });
-
-  const params = new URLSearchParams({
-    memberID: String(usedMemberId),
-    sign,
-  });
+  const params = new URLSearchParams();
+  params.set('memberID', String(usedMemberId));
+  params.set('memberid', String(usedMemberId));
+  params.set('pin', String(usedPin));
+  params.set('password', String(usedPassword));
 
   const url = `${config.centerUrl}/balance?${params.toString()}`;
 
-  logger.info('Check balance to center', {
+  logger.info('Check balance to center (no sign, with pin/password)', {
     url,
     memberID: usedMemberId,
   });
@@ -393,7 +428,7 @@ async function checkBalance({ memberId, meta } = {}) {
     ok: ipRes.ok,
     statusCode: ipRes.status,
     memberID: usedMemberId,
-    sign,
+    sign: null,
     centerUrl: url,
     raw: rawText,
     balanceInfo,
@@ -402,10 +437,9 @@ async function checkBalance({ memberId, meta } = {}) {
     receivedAt: new Date().toISOString(),
   };
 
-  // Callback khusus event balance
-  postCallback('balance.check', resultPayload).catch(() => {});
+  const safeCallbackPayload = sanitizeForCallback(resultPayload);
+  postCallback('balance.check', safeCallbackPayload).catch(() => {});
 
-  // Notif saldo rendah kalau perlu
   if (balanceInfo && config.balanceLowLimit > 0 && balanceInfo.remaining <= config.balanceLowLimit) {
     notifyLowBalance(balanceInfo).catch(() => {});
   }
@@ -414,11 +448,11 @@ async function checkBalance({ memberId, meta } = {}) {
 }
 
 // ========== FUNGSI TIKET TOPUP M-Bal ==========
-// 5. Tiket Topup M-Bal : ?cmd=ticket&memberid=[memberid]&amount=25000000&sign=[sign]
 
 async function createMBalTicket({ amount, memberId, meta }) {
   if (!config.centerUrl) throw new Error('CENTER_URL is not configured');
   const usedMemberId = memberId || config.memberId;
+
   if (!usedMemberId || !config.pin || !config.password) {
     throw new Error('Member credentials are not fully configured');
   }
@@ -432,7 +466,7 @@ async function createMBalTicket({ amount, memberId, meta }) {
 
   const params = new URLSearchParams({
     cmd: 'ticket',
-    memberid: String(usedMemberId), // memberid (lowercase)
+    memberid: String(usedMemberId),
     amount: String(numericAmount),
     sign,
   });
@@ -472,8 +506,8 @@ async function createMBalTicket({ amount, memberId, meta }) {
     receivedAt: new Date().toISOString(),
   };
 
-  postCallback('balance.ticket', resultPayload).catch(() => {});
-
+  const safeCallbackPayload = sanitizeForCallback(resultPayload);
+  postCallback('balance.ticket', safeCallbackPayload).catch(() => {});
   return resultPayload;
 }
 
@@ -481,6 +515,12 @@ module.exports = {
   sendTransaction,
   generateRefId,
   parseOtomaxMessage,
+  parseBalance,
+  classifyTransaction,
+
+  redactRaw,
+  sanitizeForCallback,
+
   checkBalance,
   createMBalTicket,
 };
