@@ -1,16 +1,16 @@
-# 🔌 Auvyn Apies
+# Auvyn Apies
 
 <div align="center">
 
-**Bridge Transaksi IP Center yang Simple & Powerful**
+**🌉 Bridge Transaksi IP Center yang Simple & Powerful**
 
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/Matsumiko/auvyn-apies/graphs/commit-activity)
 
-*Backend bridge untuk transaksi pulsa, kuota, voucher, dan produk digital lainnya ke IP Center*
+Backend bridge untuk transaksi pulsa, kuota, voucher game, dan produk digital lainnya ke IP Center.
 
-[Features](#-fitur-utama) • [Quick Start](#-quick-start) • [API Docs](#-api-endpoints) • [Configuration](#-konfigurasi)
+[✨ Features](#-fitur-utama) • [🚀 Quick Start](#-quick-start) • [📡 API Docs](#-api-endpoints) • [⚙️ Configuration](#%EF%B8%8F-konfigurasi)
 
 </div>
 
@@ -18,94 +18,91 @@
 
 ## 📖 Tentang
 
-**Auvyn Apies** adalah bridge sederhana yang menghubungkan backend utama Anda (misalnya Cloudflare Worker) dengan IP Center (engine penyedia produk digital). Dengan Auvyn Apies, backend Anda tidak perlu tahu detail rumit IP Center—cukup komunikasi melalui API yang clean dan simple.
+**Auvyn Apies** adalah bridge sederhana yang menghubungkan backend utama Anda (misal Cloudflare Worker) dengan IP Center (engine penyedia produk digital).
 
-### 🎯 Mengapa Auvyn Apies?
+### 🎯 Kenapa Auvyn Apies?
 
-- **Abstraksi Kompleksitas**: Backend hanya perlu HTTP request sederhana
-- **Security First**: Signature SHA1 + Base64URL, secret authentication
-- **Monitoring Built-in**: Logging terstruktur + notifikasi Telegram
-- **Event-Driven**: Callback otomatis ke backend untuk setiap event penting
-- **Production Ready**: Systemd service, log rotation, error handling
+- **Abstraksi Sempurna**: Backend utama tidak perlu tahu detail rumit IP Center
+- **API Clean**: Komunikasi terstruktur dan mudah dipahami
+- **Production Ready**: Sudah include monitoring, logging, dan notifikasi
+- **Secure**: Built-in authentication dan sanitization
 
-> ⚠️ **Penting**: Semua credential di dokumentasi ini adalah dummy. Gunakan data asli Anda melalui installer atau file `.env`.
+> **⚠️ Catatan Penting**  
+> Credential pada README ini hanya contoh dummy. Konfigurasi asli wajib via `.env` atau installer.
 
 ---
 
 ## ✨ Fitur Utama
 
 ### 🔐 Security & Authentication
-- **SHA1 + Base64URL Signature** untuk semua request transaksi
-- **Secret-based Authentication** untuk proteksi endpoint API
-- **Callback Secret** untuk validasi webhook
+- ✅ Signature SHA1 + Base64URL untuk transaksi IP Center
+- ✅ Secret-based authentication untuk semua endpoint `/api/*`
+- ✅ Callback Secret untuk validasi webhook ke backend
+- ✅ Payload sanitization untuk keamanan data
 
 ### 📊 Monitoring & Logging
-- **Structured Logging** dengan Winston (per kategori: success, pending, failed)
-- **Telegram Notifications** untuk transaksi & event penting
-- **Saldo Monitoring** dengan alert otomatis saat saldo rendah
-- **Report Endpoint** untuk webhook dari IP Center
+- ✅ Structured logging dengan Winston (success, pending, failed, report)
+- ✅ Notifikasi Telegram per kategori transaksi + report
+- ✅ Monitoring saldo otomatis + alert saldo rendah
+- ✅ Endpoint `/report` untuk webhook final dari IP Center
 
-### 🔄 Integration
-- **RESTful API** yang clean dan mudah digunakan
-- **Callback System** ke backend eksternal (Worker, server lain)
-- **Multiple Event Types** (transaction, balance, report)
+### 🔌 Integration
+- ✅ RESTful API yang simpel dan intuitif
+- ✅ Callback system event-driven
+- ✅ Support custom metadata untuk tracking
+- ✅ Multi-event types (transaction, balance, ticket)
 
 ### 🛠️ Operations
-- **One-Command Installation** dengan script interaktif
-- **Systemd Service** untuk production deployment
-- **Log Cleanup Script** untuk maintenance otomatis
-- **Health Check Endpoint** untuk monitoring
+- ✅ Instalasi satu perintah pakai `setup.sh`
+- ✅ Systemd service untuk production deployment
+- ✅ Script pembersih log otomatis `cleanup-logs.sh`
+- ✅ Script update cepat `update.sh`
 
 ---
 
 ## 🏗️ Arsitektur
 
 ```
-┌─────────────────┐
-│   Frontend/Web  │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────────────┐
-│  Backend Utama (Worker) │
-│                         │
-│  POST /api/transaction  │
-│  Header: x-auvyn-secret │
-└────────┬────────────────┘
-         │
-         ▼
-┌────────────────────────────┐
-│     Auvyn Apies (VPS)      │
-│                            │
-│  • Signature Generation    │
-│  • Request Handling        │
-│  • Response Parsing        │
-│  • Event Dispatching       │
-└────────┬───────────────────┘
-         │
-         ▼
-┌──────────────────────────────┐
-│   IP Center (Otomax/SW)      │
-│                              │
-│  • Process Transaction       │
-│  • Send Response             │
-│  • Send Report (webhook)     │
-└──────┬───────────────┬───────┘
-       │               │
-       ▼               ▼
-   Response        /report
-       │               │
-       ▼               ▼
-   ┌────────────────────────┐
-   │   Event Processing     │
-   │                        │
-   │  • Parse & Classify    │
-   │  • Update Balance      │
-   │  • Write Logs          │
-   │  • Send Notifications  │
-   │  • Trigger Callbacks   │
-   └────────────────────────┘
+┌─────────────────────┐
+│  Frontend / Web     │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Backend Utama      │
+│  (Cloudflare)       │──► POST /api/transaction (secret)
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│   Auvyn Apies       │
+│   (VPS Server)      │
+│                     │
+│  • Buat signature   │
+│  • Kirim ke Center  │
+│  • Parse response   │
+│  • Klasifikasi      │
+│  • Log & Notify     │
+│  • Callback         │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│   IP Center         │
+│   (Otomax/SW)       │
+│                     │
+│  • Proses transaksi │
+│  • Kirim report     │
+└─────────────────────┘
 ```
+
+### 📋 Flow Transaksi
+
+1. **Request** → Backend utama call `/api/transaction` dengan product & dest
+2. **Processing** → Auvyn Apies kirim request ke IP Center → dapat respon awal (biasanya pending)
+3. **Callback** → Auvyn Apies kirim callback **sanitized** event `transaction.request` ke backend
+4. **Report** → IP Center kirim report final ke endpoint `/report`
+5. **Final** → Auvyn Apies klasifikasi final, log, telegram, lalu callback event `transaction.report`
 
 ---
 
@@ -113,30 +110,34 @@
 
 ### Instalasi (VPS)
 
-Jalankan satu perintah ini sebagai root:
+Jalankan sebagai **root**:
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/Matsumiko/auvyn-apies/main/setup.sh)
 ```
 
-Installer akan:
-1. ✅ Install dependencies (curl, git, node)
-2. 📦 Clone/update repository ke `/opt/auvyn-apies`
-3. 🔧 Install npm packages
-4. ⚙️ Setup konfigurasi interaktif
-5. 🎯 Create & enable systemd service
+### 📦 Apa yang Dilakukan Installer?
 
-### Verifikasi Service
+1. ✅ Install dependencies (curl, git, node.js)
+2. ✅ Clone/update repo ke `/opt/auvyn-apies`
+3. ✅ Install npm packages
+4. ✅ Setup `.env` interaktif
+5. ✅ Buat & enable systemd service
+
+### ✓ Verifikasi Service
 
 ```bash
 # Check status
 systemctl status auvyn-apies.service
 
-# View logs
+# View logs real-time
 journalctl -u auvyn-apies.service -f
 
 # Restart service
 systemctl restart auvyn-apies.service
+
+# Stop service
+systemctl stop auvyn-apies.service
 ```
 
 ---
@@ -146,107 +147,99 @@ systemctl restart auvyn-apies.service
 ```
 auvyn-apies/
 ├── 📄 server.js              # Entry point
-├── 📦 package.json
-├── 🚀 setup.sh               # Quick installer
-├── 🧹 cleanup-logs.sh        # Log maintenance script
-├── 📝 .env.example           # Template konfigurasi
-├── 🙈 .gitignore
-├── 📊 logs/                  # Log files (auto-generated)
+├── 📄 package.json           # Dependencies
+├── 🔧 setup.sh              # Installer script
+├── 🔧 update.sh             # Update script
+├── 🔧 cleanup-logs.sh       # Log cleanup script
+├── 📄 .env.example          # Environment template
+├── 📁 logs/                 # Log files
 │   ├── combined.log
 │   ├── error.log
 │   ├── trx-success.log
 │   ├── trx-pending.log
 │   ├── trx-failed.log
 │   └── report.log
-└── 🔧 src/
-    ├── config.js             # Configuration loader
-    ├── logger.js             # Winston logger setup
-    ├── telegram.js           # Telegram notifications
-    ├── callback.js           # Backend callback handler
-    ├── ipCenter.js           # IP Center client & parser
-    ├── server.js             # Express app
+└── 📁 src/
+    ├── config.js            # Configuration loader
+    ├── logger.js            # Winston logger
+    ├── telegram.js          # Telegram notifications
+    ├── callback.js          # Callback handler
+    ├── store.js             # Data store
+    ├── ipCenter.js          # IP Center integration
+    ├── server.js            # Express server
     ├── middleware/
-    │   └── auth.js           # Authentication middleware
+    │   └── auth.js          # Authentication middleware
     └── routes/
-        ├── api.js            # API endpoints
-        └── report.js         # Report webhook endpoint
+        ├── api.js           # API routes
+        └── report.js        # Report webhook
 ```
 
 ---
 
 ## ⚙️ Konfigurasi
 
-### Environment Variables
-
-Buat file `.env` di root project atau gunakan installer interaktif:
+Buat file `.env` di root project atau isi lewat installer:
 
 ```env
 # Server Configuration
 PORT=5882
 
-# IP Center Configuration
+# IP Center Credentials
 CENTER_URL=http://10.0.0.1:6969
 MEMBER_ID=AG000001
 PIN=0000
 PASSWORD=MyStrongPassword123
 SIGN_PREFIX=ENGINE
 
-# Security
+# API Security
 AUVYN_SECRET=super-secret-random-string
 
-# Callback Configuration (Optional)
+# Callback Configuration
 CALLBACK_URL=https://worker.example.com/auvyn/callback
 CALLBACK_SECRET=another-secret-or-same-as-above
 
-# Logging
+# Logging & Monitoring
 LOGS_DIR=./logs
 BALANCE_LOW_LIMIT=50000
 
 # Telegram Notifications (Optional)
-# Success Notifications
-TG_SUCCESS_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
-TG_SUCCESS_CHAT_ID=12345678
-
-# Pending Notifications
+TG_SUCCESS_BOT_TOKEN=
+TG_SUCCESS_CHAT_ID=
 TG_PENDING_BOT_TOKEN=
 TG_PENDING_CHAT_ID=
-
-# Failed Notifications
 TG_FAILED_BOT_TOKEN=
 TG_FAILED_CHAT_ID=
-
-# System Notifications (Reports & Low Balance)
 TG_SYSTEM_BOT_TOKEN=
 TG_SYSTEM_CHAT_ID=
 ```
 
-### Penjelasan Parameter
+### 📝 Penjelasan Parameter
 
-| Parameter | Required | Deskripsi |
-|-----------|----------|-----------|
-| `PORT` | ✅ | Port server (default: 5882) |
-| `CENTER_URL` | ✅ | Base URL IP Center (tanpa trailing slash) |
-| `MEMBER_ID` | ✅ | ID agen dari provider |
-| `PIN` | ✅ | PIN agen |
-| `PASSWORD` | ✅ | Password agen |
-| `SIGN_PREFIX` | ✅ | Prefix untuk signature (sesuai dokumen provider) |
-| `AUVYN_SECRET` | ✅ | Secret untuk autentikasi API |
-| `CALLBACK_URL` | ❌ | URL backend untuk menerima callback |
-| `CALLBACK_SECRET` | ❌ | Secret untuk validasi callback (default: sama dengan `AUVYN_SECRET`) |
-| `LOGS_DIR` | ✅ | Direktori penyimpanan log (default: ./logs) |
-| `BALANCE_LOW_LIMIT` | ✅ | Threshold saldo rendah dalam Rupiah |
-| `TG_*_BOT_TOKEN` | ❌ | Token bot Telegram untuk notifikasi |
-| `TG_*_CHAT_ID` | ❌ | Chat ID untuk notifikasi Telegram |
+| Parameter           | Required | Deskripsi                                               |
+| ------------------- | :------: | ------------------------------------------------------- |
+| `PORT`              |    ✅    | Port server (default: 5882)                             |
+| `CENTER_URL`        |    ✅    | Base URL IP Center                                      |
+| `MEMBER_ID`         |    ✅    | ID agen provider                                        |
+| `PIN`               |    ✅    | PIN agen                                                |
+| `PASSWORD`          |    ✅    | Password IP Center                                      |
+| `SIGN_PREFIX`       |    ✅    | Prefix signature (ikuti aturan provider)                |
+| `AUVYN_SECRET`      |    ✅    | Secret untuk akses endpoint `/api/*`                    |
+| `CALLBACK_URL`      |    ⚪    | URL backend utama untuk menerima callback               |
+| `CALLBACK_SECRET`   |    ⚪    | Secret callback (default: sama dengan `AUVYN_SECRET`)   |
+| `LOGS_DIR`          |    ✅    | Direktori penyimpanan log (default: `./logs`)           |
+| `BALANCE_LOW_LIMIT` |    ✅    | Batas alert saldo rendah dalam Rupiah (e.g., 50000)    |
+| `TG_*_BOT_TOKEN`    |    ⚪    | Token bot Telegram per kategori                         |
+| `TG_*_CHAT_ID`      |    ⚪    | Chat ID Telegram per kategori                           |
 
 ---
 
-## 🔌 API Endpoints
+## 📡 API Endpoints
 
-Semua endpoint `/api/*` memerlukan header autentikasi:
-
-```http
-x-auvyn-secret: <AUVYN_SECRET>
-```
+> **🔑 Authentication Required**  
+> Semua endpoint `/api/*` wajib menyertakan header:
+> ```http
+> x-auvyn-secret: <AUVYN_SECRET>
+> ```
 
 ### 🏥 Health Check
 
@@ -268,32 +261,31 @@ GET /
 
 ### 🏓 Ping
 
-Test koneksi dan validasi secret.
+Test koneksi API dengan endpoint ini.
 
 ```http
 POST /api/ping
-Headers: x-auvyn-secret: <secret>
+x-auvyn-secret: <your-secret>
 ```
 
 **Response:**
 ```json
 {
   "ok": true,
-  "message": "pong",
-  "time": "2025-01-01T00:00:00.000Z"
+  "message": "pong"
 }
 ```
 
 ---
 
-### 💳 Transaction
+### 💳 Transaction (Request Awal)
 
-Endpoint utama untuk transaksi produk digital.
+Endpoint utama untuk memproses transaksi produk digital.
 
 ```http
 POST /api/transaction
 Content-Type: application/json
-x-auvyn-secret: <secret>
+x-auvyn-secret: <your-secret>
 ```
 
 **Request Body:**
@@ -305,21 +297,12 @@ x-auvyn-secret: <secret>
   "refID": "AVN1234567890",
   "meta": {
     "orderId": "INV-123",
-    "source": "kuota-worker",
-    "customData": "anything"
+    "source": "kuota-worker"
   }
 }
 ```
 
-| Field | Type | Required | Deskripsi |
-|-------|------|----------|-----------|
-| `product` | string | ✅ | Kode produk (sesuai IP Center) |
-| `dest` | string | ✅ | Nomor tujuan/ID tujuan |
-| `qty` | number | ❌ | Jumlah/quantity (default: 1) |
-| `refID` | string | ❌ | Reference ID (auto-generate jika kosong) |
-| `meta` | object | ❌ | Data tambahan (disimpan di log & callback) |
-
-**Response Success:**
+**Response (Internal - ke Backend Utama):**
 ```json
 {
   "ok": true,
@@ -328,60 +311,40 @@ x-auvyn-secret: <secret>
   "product": "PFF",
   "dest": "085727035336",
   "qty": 1,
-  "sign": "mF8xKJ...",
-  "centerUrl": "http://127.0.0.1:6969/trx?product=PFF&...",
-  "raw": "Free Fire kode \"PFF\" Cuan#R175152090...",
-  "meta": {
-    "orderId": "INV-123"
-  },
+  "raw": "[INTERNAL DATA]",
   "balanceInfo": {
-    "raw": "77.827.622",
     "remaining": 77827622
   },
-  "category": "success",
+  "category": "pending",
   "providerResult": {
-    "state": "SUCCESS",
-    "code": "SUKSES",
-    "trxid": "175152090",
-    "tujuan": "AKX3CF8.087810203267",
-    "sn": "ABC123XYZ",
-    "duplicate": false,
-    "raw": "..."
+    "state": "PENDING",
+    "code": "PENDING_AKAN_DIPROSES"
   },
-  "isDuplicate": false,
-  "receivedAt": "2025-01-01T00:00:00.000Z"
+  "meta": {
+    "orderId": "INV-123"
+  }
 }
 ```
 
-**Category Values:**
-- `success` - Transaksi berhasil
-- `pending` - Transaksi diproses/menunggu
-- `failed` - Transaksi gagal
+**Category Types:**
+- `success` → Transaksi berhasil
+- `pending` → Transaksi sedang diproses
+- `failed` → Transaksi gagal
 
-**Provider Result Codes:**
-| Code | State | Deskripsi |
-|------|-------|-----------|
-| `SUKSES` | SUCCESS | Transaksi berhasil |
-| `SUKSES_SUDAH_PERNAH` | SUCCESS | Duplikat (sudah pernah diproses) |
-| `GAGAL_TIMEOUT` | FAILED | Timeout ke provider |
-| `GAGAL_TUJUAN_SALAH` | FAILED | Nomor/tujuan tidak valid |
-| `GAGAL_SALAH_KODE` | FAILED | Kode produk tidak valid |
-| `GAGAL_SALDO_TIDAK_CUKUP` | FAILED | Saldo tidak mencukupi |
-| `GAGAL_BLACKLIST` | FAILED | Nomor dalam blacklist |
-| `PENDING_AKAN_DIPROSES` | PENDING | Akan diproses |
-| `PENDING_MENUNGGU_TRX_SEBELUMNYA` | PENDING | Menunggu transaksi sebelumnya |
-| `PENDING_SEDANG_DIPROSES` | PENDING | Sedang diproses |
+> **⚠️ Penting**  
+> Response dari `/api/transaction` adalah payload **internal** untuk backend utama.  
+> Jika akan diteruskan ke frontend publik, lakukan **filtering** di backend utama.
 
 ---
 
 ### 💰 Check Balance
 
-Cek saldo M-Bal IP Center.
+Cek saldo member di IP Center.
 
 ```http
 POST /api/balance
 Content-Type: application/json
-x-auvyn-secret: <secret>
+x-auvyn-secret: <your-secret>
 ```
 
 **Request Body (Optional):**
@@ -398,504 +361,329 @@ x-auvyn-secret: <secret>
 ```json
 {
   "ok": true,
-  "statusCode": 200,
-  "memberID": "AG000001",
-  "sign": "...",
-  "centerUrl": "http://127.0.0.1:6969/balance?memberID=AG000001&sign=...",
-  "raw": "M-Bal : 77.872.622 - 45.000 = 77.827.622",
-  "balanceInfo": {
-    "raw": "77.827.622",
-    "remaining": 77827622
-  },
-  "providerResult": {
-    "state": "UNKNOWN",
-    "code": "UNKNOWN",
-    "trxid": null,
-    "tujuan": null,
-    "sn": null,
-    "duplicate": false,
-    "raw": "M-Bal : 77.872.622 - 45.000 = 77.827.622"
-  },
-  "meta": {
-    "source": "manual-check"
-  },
-  "receivedAt": "2025-01-01T00:00:00.000Z"
+  "balance": 12345678,
+  "memberId": "AG000001"
 }
 ```
-
-> 💡 **Tip**: Jika `balanceInfo.remaining <= BALANCE_LOW_LIMIT`, notifikasi otomatis akan dikirim via Telegram (bot sistem).
 
 ---
 
 ### 🎫 Ticket M-Bal
 
-Buat tiket topup saldo M-Bal.
+Request tiket deposit (M-Bal) ke IP Center.
 
 ```http
 POST /api/ticket-mbal
 Content-Type: application/json
-x-auvyn-secret: <secret>
+x-auvyn-secret: <your-secret>
 ```
 
 **Request Body:**
 ```json
 {
   "amount": 25000000,
-  "memberId": "AG000001",
-  "meta": {
-    "source": "owner",
-    "note": "topup saldo awal"
-  }
+  "memberId": "AG000001"
 }
 ```
-
-| Field | Type | Required | Deskripsi |
-|-------|------|----------|-----------|
-| `amount` | number | ✅ | Jumlah topup (Rupiah, harus > 0) |
-| `memberId` | string | ❌ | ID member (default: dari .env) |
-| `meta` | object | ❌ | Data tambahan |
 
 **Response:**
 ```json
 {
   "ok": true,
-  "statusCode": 200,
-  "memberID": "AG000001",
+  "ticket": "TICKET123456",
   "amount": 25000000,
-  "sign": "...",
-  "centerUrl": "http://127.0.0.1:6969/?cmd=ticket&memberid=AG000001&amount=25000000&sign=...",
-  "raw": "Tiket M-Bal berhasil dibuat...",
-  "balanceInfo": {
-    "raw": "100.000.000",
-    "remaining": 100000000
-  },
-  "providerResult": {
-    "state": "UNKNOWN",
-    "code": "UNKNOWN",
-    "trxid": null,
-    "tujuan": null,
-    "sn": null,
-    "duplicate": false,
-    "raw": "Tiket M-Bal berhasil dibuat..."
-  },
-  "meta": {
-    "source": "owner",
-    "note": "topup saldo awal"
-  },
-  "receivedAt": "2025-01-01T00:00:00.000Z"
+  "memberId": "AG000001"
 }
 ```
 
 ---
 
-### 📨 Report Webhook
+### 📬 Report Webhook (Final Report)
 
-Endpoint untuk menerima report/webhook dari IP Center.
+Endpoint untuk menerima laporan final dari IP Center.
 
 ```http
 ALL /report
 ```
 
-> ⚠️ **Setup**: Konfigurasikan URL ini sebagai `REPORTURL` di pengaturan IP Center Anda.
-
 **Behavior:**
-- Menerima semua HTTP methods (GET, POST, dll)
-- Log semua data (query, body, headers) ke `logs/report.log`
-- Kirim notifikasi Telegram (bot sistem)
-- Trigger callback dengan event `transaction.report`
-- Response: `text/plain` dengan isi `OK`
+- Menerima semua HTTP method (GET, POST, PUT, dll)
+- Log raw report ke `logs/report.log`
+- Klasifikasi status final transaksi
+- Kirim notifikasi Telegram
+- Callback event `transaction.report` ke backend utama
+
+> **💡 Info**  
+> Endpoint ini biasanya di-hit langsung oleh IP Center setelah transaksi selesai diproses.
 
 ---
 
-## 🔔 Callback System
+## 🔔 Callback System (Sanitized)
 
-Jika `CALLBACK_URL` dikonfigurasi, Auvyn Apies akan mengirim POST request ke backend Anda untuk setiap event.
+Jika `CALLBACK_URL` di-set, Auvyn Apies akan mengirim callback ke backend utama setiap kali ada event.
 
-### Event Types
-
-| Event | Trigger | Payload |
-|-------|---------|---------|
-| `transaction.request` | Setiap transaksi ke IP Center | Full transaction response |
-| `transaction.report` | Data diterima di `/report` | Report data |
-| `balance.check` | Cek saldo via `/api/balance` | Balance response |
-| `balance.ticket` | Tiket M-Bal via `/api/ticket-mbal` | Ticket response |
-
-### Request Format
+### 📤 Header Callback
 
 ```http
 POST <CALLBACK_URL>
 Content-Type: application/json
 x-auvyn-callback-secret: <CALLBACK_SECRET>
-x-auvyn-event: transaction.request
+x-auvyn-event: <event-type>
 ```
 
-**Body:** Response payload lengkap dari endpoint terkait.
+### 🎭 Event Types
 
-### Implementasi Backend (Example)
+- `transaction.request` → Respon awal transaksi dari IP Center
+- `transaction.report` → Laporan final transaksi
+- `balance.check` → Hasil cek saldo
+- `balance.ticket` → Hasil request tiket M-Bal
 
-```javascript
-// Node.js / Express
-app.post('/auvyn/callback', async (req, res) => {
-  // Validasi secret
-  const secret = req.headers['x-auvyn-callback-secret'];
-  if (secret !== process.env.AUVYN_CALLBACK_SECRET) {
-    return res.status(401).json({ error: 'Invalid secret' });
+### 🛡️ Payload Sanitization
+
+**Yang dibuang / disensor sebelum callback:**
+- `centerUrl` → URL IP Center
+- `sign` → Signature hash
+- `memberID` → ID member
+- Bagian sensitif pada `raw` (HRG, M-Bal, SN/Ref, dll)
+
+### ✅ Contoh Callback Aman
+
+```json
+{
+  "ok": true,
+  "statusCode": 200,
+  "refID": "AVN1736425720255",
+  "product": "PFF",
+  "dest": "085727035336",
+  "qty": 1,
+  "category": "success",
+  "raw": "[REDACTED]",
+  "providerResult": {
+    "state": "SUCCESS",
+    "code": "SUKSES",
+    "sn": "[REDACTED]",
+    "raw": "[REDACTED]"
+  },
+  "meta": {
+    "orderId": "INV-123"
   }
-
-  const event = req.headers['x-auvyn-event'];
-  const payload = req.body;
-
-  switch (event) {
-    case 'transaction.request':
-      // Update status order berdasarkan category & providerResult
-      await updateOrderStatus(payload.refID, payload.category, payload);
-      break;
-
-    case 'transaction.report':
-      // Update final status dari report IP Center
-      await processFinalReport(payload);
-      break;
-
-    case 'balance.check':
-      // Simpan/display saldo terkini
-      await saveBalanceSnapshot(payload.balanceInfo);
-      break;
-
-    case 'balance.ticket':
-      // Log riwayat topup
-      await logTopupHistory(payload);
-      break;
-  }
-
-  res.json({ received: true });
-});
+}
 ```
+
+> **🔐 Keamanan**  
+> Payload callback sudah di-sanitize untuk melindungi data sensitif.  
+> Backend utama hanya menerima informasi yang aman untuk diproses.
 
 ---
 
 ## 📊 Logging & Monitoring
 
-### File Logs
+### 📄 File Log
 
-| File | Isi |
-|------|-----|
-| `combined.log` | Semua log activity |
-| `error.log` | Error & exceptions |
-| `trx-success.log` | Transaksi berhasil |
-| `trx-pending.log` | Transaksi pending |
-| `trx-failed.log` | Transaksi gagal |
-| `report.log` | Data dari `/report` webhook |
+| File                | Isi                                  |
+| ------------------- | ------------------------------------ |
+| `combined.log`      | Semua aktivitas aplikasi             |
+| `error.log`         | Error & exception                    |
+| `trx-success.log`   | Transaksi sukses                     |
+| `trx-pending.log`   | Transaksi pending                    |
+| `trx-failed.log`    | Transaksi gagal                      |
+| `report.log`        | Webhook `/report` dari IP Center     |
 
-### Telegram Notifications
+### 📱 Notifikasi Telegram
 
-#### Transaction Notifications
+Auvyn Apies mendukung **4 kategori bot Telegram** yang terpisah:
 
-Setiap transaksi mengirim notifikasi dengan format:
+| Bot         | Fungsi                                      |
+| ----------- | ------------------------------------------- |
+| **SUCCESS** | Notifikasi transaksi berhasil               |
+| **PENDING** | Notifikasi transaksi pending                |
+| **FAILED**  | Notifikasi transaksi gagal                  |
+| **SYSTEM**  | Alert saldo rendah, report, error           |
 
-**Success:**
-```
-✅ TRX SUCCESS
-
-RefID: AVN1736425720255
-Product: PFF
-Dest: 085727035336
-Qty: 1
-Status: 200
-Saldo Tersisa: Rp 77,827,622
-
-Raw Response:
-Free Fire kode "PFF" Cuan#R175152090...
-
-Meta:
-{
-  "orderId": "INV-123",
-  "source": "kuota-worker"
-}
-```
-
-**Pending:**
-```
-🕒 TRX PENDING
-
-RefID: AVN1736425720255
-...
-```
-
-**Failed:**
-```
-❌ TRX FAILED
-
-RefID: AVN1736425720255
-Reason: GAGAL_SALDO_TIDAK_CUKUP
-...
-```
-
-#### System Notifications
-
-**Low Balance Alert:**
-```
-⚠️ SALDO RENDAH!
-
-Member ID: AG000001
-Saldo Saat Ini: Rp 45,000
-Limit: Rp 50,000
-
-Silakan topup segera!
-```
-
-**Report Received:**
-```
-📨 REPORT RECEIVED
-
-Method: GET
-IP: 10.0.0.1
-
-Query Params:
-refID=AVN123...
-
-Raw:
-...
-```
+> **💡 Pro Tip**  
+> Payload Telegram **tetap full internal** (aman karena hanya dikirim ke bot pribadi kamu).  
+> Berbeda dengan callback ke backend yang sudah di-sanitize.
 
 ---
 
 ## 🧹 Maintenance
 
-### Log Cleanup
+### Cleanup Log
 
-Auvyn Apies menyediakan script untuk membersihkan log lama:
+Bersihkan log lama untuk menghemat disk space.
 
 ```bash
 cd /opt/auvyn-apies
-
-# Hapus log lebih dari 7 hari
 ./cleanup-logs.sh
 
-# Hapus log lebih dari 14 hari
+# Atau custom retention
 KEEP_DAYS=14 ./cleanup-logs.sh
 ```
 
-### Setup Cron (Automatic Cleanup)
+### ⏰ Cron Otomatis
 
-Bersihin log otomatis setiap hari jam 3 pagi:
+Setup cron job untuk cleanup otomatis setiap hari jam 3 pagi:
 
 ```bash
-# Edit crontab
 crontab -e
+```
 
-# Tambahkan baris ini:
+Tambahkan line ini:
+
+```cron
 0 3 * * * /bin/bash /opt/auvyn-apies/cleanup-logs.sh >> /var/log/cleanup-auvyn.log 2>&1
 ```
 
-### Service Management
+---
+
+## 🔄 Update / Upgrade
+
+Kalau ada update di repository, jalankan:
 
 ```bash
-# Start
-systemctl start auvyn-apies.service
+sudo /opt/auvyn-apies/update.sh
+```
 
-# Stop
-systemctl stop auvyn-apies.service
+### 📦 Fungsi `update.sh`
 
-# Restart
+1. ✅ Auto stash kalau ada perubahan lokal
+2. ✅ Pull update terbaru dari GitHub
+3. ✅ Install dependency kalau ada perubahan
+4. ✅ Restart service `auvyn-apies.service`
+5. ✅ File `.env` **tidak ditimpa**
+
+### 🚀 One-liner Update
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Matsumiko/auvyn-apies/main/update.sh)
+```
+
+---
+
+## 🔧 Troubleshooting
+
+### ❌ Git pull gagal karena local changes
+
+**Error:**
+```
+error: Your local changes would be overwritten by merge
+```
+
+**Solusi Cepat:**
+```bash
+cd /opt/auvyn-apies
+git stash
+git pull --ff-only
+git stash pop
 systemctl restart auvyn-apies.service
+```
 
-# Enable auto-start on boot
-systemctl enable auvyn-apies.service
+Atau langsung pakai `update.sh` karena sudah auto-stash.
 
-# Disable auto-start
-systemctl disable auvyn-apies.service
+---
 
-# View logs
-journalctl -u auvyn-apies.service -f
+### ❌ Callback tidak sampai
 
-# View last 100 lines
-journalctl -u auvyn-apies.service -n 100
+**Checklist:**
+- ✅ Cek `CALLBACK_URL` sudah benar
+- ✅ Pastikan backend utama bisa diakses dari VPS
+- ✅ Verifikasi `CALLBACK_SECRET` cocok di kedua sisi
+- ✅ Check firewall/security group
+- ✅ Lihat log `combined.log` untuk error
+
+---
+
+### ❌ Notifikasi Telegram tidak masuk
+
+**Checklist:**
+- ✅ Pastikan token bot benar
+- ✅ Bot sudah join grup/chat
+- ✅ Chat ID benar
+- ✅ Bot punya permission untuk send message
+- ✅ Cek log `error.log` untuk detail error
+
+**Test Manual:**
+```bash
+curl -X POST "https://api.telegram.org/bot<TOKEN>/sendMessage" \
+  -d "chat_id=<CHAT_ID>" \
+  -d "text=Test from Auvyn Apies"
 ```
 
 ---
 
-## 💻 Development
+### ❌ Service tidak start
 
-### Setup Local Environment
-
+**Debug:**
 ```bash
-# Clone repository
-git clone https://github.com/Matsumiko/auvyn-apies.git
-cd auvyn-apies
+# Lihat status detail
+systemctl status auvyn-apies.service
 
-# Copy environment template
-cp .env.example .env
-
-# Edit dengan data sandbox/dummy
-nano .env
-
-# Install dependencies
-npm install
-
-# Start development server
-npm start
-```
-
-Server akan berjalan di `http://localhost:5882`.
-
-### Testing Endpoints
-
-```bash
-# Health check
-curl http://localhost:5882/
-
-# Ping (butuh secret)
-curl -X POST http://localhost:5882/api/ping \
-  -H "x-auvyn-secret: your-secret"
-
-# Transaction
-curl -X POST http://localhost:5882/api/transaction \
-  -H "content-type: application/json" \
-  -H "x-auvyn-secret: your-secret" \
-  -d '{
-    "product": "PFF",
-    "dest": "085727035336",
-    "qty": 1,
-    "meta": {
-      "orderId": "TEST-001"
-    }
-  }'
-
-# Check balance
-curl -X POST http://localhost:5882/api/balance \
-  -H "content-type: application/json" \
-  -H "x-auvyn-secret: your-secret" \
-  -d '{}'
-```
-
----
-
-## 🔒 Security Best Practices
-
-### 1. Environment Variables
-- ✅ **Jangan commit** file `.env` ke repository
-- ✅ Gunakan **strong random strings** untuk secrets
-- ✅ **Rotate secrets** secara berkala
-- ✅ Simpan backup `.env` di tempat aman (encrypted)
-
-### 2. Network
-- ✅ Gunakan **firewall** (ufw, iptables)
-- ✅ **Whitelist** IP backend jika memungkinkan
-- ✅ Pertimbangkan **VPN/tunnel** untuk komunikasi antar server
-- ✅ Gunakan **HTTPS/TLS** untuk production (reverse proxy: nginx/caddy)
-
-### 3. Monitoring
-- ✅ Setup **alerting** untuk error rate tinggi
-- ✅ Monitor **disk space** (log files bisa besar)
-- ✅ Review **logs** secara berkala
-- ✅ Track **balance trends** untuk deteksi anomali
-
-### 4. Updates
-- ✅ Update **Node.js** & **dependencies** berkala
-- ✅ Review **security advisories** (npm audit)
-- ✅ Backup data sebelum update major version
-- ✅ Test di staging sebelum update production
-
----
-
-## 🐛 Troubleshooting
-
-### Service tidak start
-
-```bash
-# Check logs
+# Lihat log error
 journalctl -u auvyn-apies.service -n 50
 
-# Check .env file
-cat /opt/auvyn-apies/.env
-
-# Check permissions
-ls -la /opt/auvyn-apies
-
-# Check Node.js version
-node --version  # Should be >= 18
-```
-
-### Transaksi selalu failed
-
-- ✅ Cek `CENTER_URL` (pastikan IP/port benar)
-- ✅ Verifikasi `MEMBER_ID`, `PIN`, `PASSWORD`
-- ✅ Test koneksi: `curl -v <CENTER_URL>`
-- ✅ Cek signature: review `SIGN_PREFIX`
-- ✅ Lihat log detail di `logs/trx-failed.log`
-
-### Callback tidak sampai ke backend
-
-- ✅ Cek `CALLBACK_URL` (typo?)
-- ✅ Verify backend bisa diakses dari VPS
-- ✅ Test: `curl -X POST <CALLBACK_URL> -d '{"test":true}'`
-- ✅ Check backend logs untuk request masuk
-- ✅ Validate `CALLBACK_SECRET` match di kedua sisi
-
-### Telegram notification tidak masuk
-
-- ✅ Verifikasi `TG_*_BOT_TOKEN` dan `TG_*_CHAT_ID`
-- ✅ Test bot token: `curl https://api.telegram.org/bot<TOKEN>/getMe`
-- ✅ Pastikan bot sudah di-add ke chat/group
-- ✅ Check logs untuk error Telegram API
-
-### Log files terlalu besar
-
-```bash
-# Manual cleanup
+# Test manual run
 cd /opt/auvyn-apies
-./cleanup-logs.sh
-
-# Setup automatic cleanup (cron)
-crontab -e
-# Add: 0 3 * * * /bin/bash /opt/auvyn-apies/cleanup-logs.sh
-
-# Compress old logs
-gzip logs/*.log
-
-# Atau gunakan logrotate
+node server.js
 ```
 
 ---
 
-## 📞 Support & Community
+### ❌ Port sudah digunakan
 
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/Matsumiko/auvyn-apies/issues)
-- 💡 **Feature Requests**: [GitHub Discussions](https://github.com/Matsumiko/auvyn-apies/discussions)
-- 📖 **Documentation**: [Wiki](https://github.com/Matsumiko/auvyn-apies/wiki)
+**Error:**
+```
+Error: listen EADDRINUSE: address already in use :::5882
+```
+
+**Solusi:**
+```bash
+# Cari process yang pakai port
+sudo lsof -i :5882
+
+# Kill process
+sudo kill -9 <PID>
+
+# Atau ubah PORT di .env
+```
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Silakan:
+Contributions are welcome! Kalau kamu punya ide atau perbaikan:
 
-1. Fork repository
-2. Buat feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push ke branch (`git push origin feature/AmazingFeature`)
+1. Fork repository ini
+2. Buat branch baru (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push ke branch (`git push origin feature/amazing-feature`)
 5. Buat Pull Request
 
 ---
 
-## 📝 License
+## 📜 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - lihat file [LICENSE](LICENSE) untuk detail.
 
 ---
 
-## 🙏 Acknowledgments
+## 💬 Support
 
-- IP Center & Provider communities
-- All contributors and users
-- Open source libraries used in this project
+Punya pertanyaan atau butuh bantuan?
+
+- 🐛 **Bug Report**: [GitHub Issues](https://github.com/Matsumiko/auvyn-apies/issues)
+- 💡 **Feature Request**: [GitHub Discussions](https://github.com/Matsumiko/auvyn-apies/discussions)
 
 ---
 
 <div align="center">
 
-**Made with ❤️ for Indonesian Digital Product Sellers**
+### ⭐ Support Project
 
-⭐ Star project ini jika membantu! ⭐
+Project ini dibuat untuk membantu seller produk digital Indonesia.  
+Kalau bermanfaat, **jangan lupa kasih star** ⭐
+
+**Made with ❤️ by Indonesian Developers**
+
+[⬆ Back to Top](#auvyn-apies)
 
 </div>
